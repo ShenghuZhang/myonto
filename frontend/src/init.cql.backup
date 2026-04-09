@@ -1,0 +1,426 @@
+// Neo4j Initialization Script for AIP MVP
+// This script creates the graph schema and sample data
+
+// ============================================
+// Part 1: Create Schema Constraints and Indexes
+// ============================================
+
+// Node uniqueness constraints
+CREATE CONSTRAINT dc_id_unique IF NOT EXISTS FOR (dc:DistributionCenter) REQUIRE dc.dc_id IS UNIQUE;
+CREATE CONSTRAINT order_id_unique IF NOT EXISTS FOR (o:CustomerOrder) REQUIRE o.order_id IS UNIQUE;
+CREATE CONSTRAINT sku_id_unique IF NOT EXISTS FOR (p:Product) REQUIRE p.sku_id IS UNIQUE;
+CREATE CONSTRAINT cap_id_unique IF NOT EXISTS FOR (c:Capability) REQUIRE c.cap_id IS UNIQUE;
+
+// Performance indexes
+CREATE INDEX dc_status IF NOT EXISTS FOR (dc:DistributionCenter) ON (dc.status);
+CREATE INDEX order_priority IF NOT EXISTS FOR (o:CustomerOrder) ON (o.priority);
+CREATE INDEX order_status IF NOT EXISTS FOR (o:CustomerOrder) ON (o.status);
+
+// ============================================
+// Part 2: Create Distribution Centers
+// ============================================
+
+MERGE (dc1:DistributionCenter {dc_id: 'DC_LON_01'})
+ON CREATE SET
+    dc1.geo_location = point({latitude: 51.5074, longitude: -0.1278}),
+    dc1.capacity = 10000,
+    dc1.capacity_utilization = 0.65,
+    dc1.status = 'Active',
+    dc1.risk_score = 0.15,
+    dc1.created_at = datetime(),
+    dc1.updated_at = datetime();
+
+MERGE (dc2:DistributionCenter {dc_id: 'DC_LON_02'})
+ON CREATE SET
+    dc2.geo_location = point({latitude: 51.5074, longitude: -0.1278}),
+    dc2.capacity = 8000,
+    dc2.capacity_utilization = 0.75,
+    dc2.status = 'Active',
+    dc2.risk_score = 0.10,
+    dc2.created_at = datetime(),
+    dc2.updated_at = datetime();
+
+MERGE (dc3:DistributionCenter {dc_id: 'DC_MUC_01'})
+ON CREATE SET
+    dc3.geo_location = point({latitude: 48.1351, longitude: 11.5820}),
+    dc3.capacity = 12000,
+    dc3.capacity_utilization = 0.88,  // 高负载
+    dc3.status = 'Active',
+    dc3.risk_score = 0.65,  // 对应提高的风险评分
+    dc3.created_at = datetime(),
+    dc3.updated_at = datetime();
+
+MERGE (dc4:DistributionCenter {dc_id: 'DC_MUC_02'})
+ON CREATE SET
+    dc4.geo_location = point({latitude: 48.1351, longitude: 11.5820}),
+    dc4.capacity = 6000,
+    dc4.capacity_utilization = 0.80,
+    dc4.status = 'Active',
+    dc4.risk_score = 0.25,
+    dc4.created_at = datetime(),
+    dc4.updated_at = datetime();
+
+// ============================================
+// Part 3: Create Products
+// ============================================
+
+MERGE (p1:Product {sku_id: 'SKU_ELECTRONICS_001'})
+ON CREATE SET
+    p1.unit_cost = 150.00,
+    p1.lead_time = 7,
+    p1.category = 'Electronics',
+    p1.created_at = datetime(),
+    p1.updated_at = datetime();
+
+MERGE (p2:Product {sku_id: 'SKU_FURNITURE_001'})
+ON CREATE SET
+    p2.unit_cost = 200.00,
+    p2.lead_time = 14,
+    p2.category = 'Furniture',
+    p2.created_at = datetime(),
+    p2.updated_at = datetime();
+
+MERGE (p3:Product {sku_id: 'SKU_CLOTHING_001'})
+ON CREATE SET
+    p3.unit_cost = 50.00,
+    p3.lead_time = 5,
+    p3.category = 'Clothing',
+    p3.created_at = datetime(),
+    p3.updated_at = datetime();
+
+// ============================================
+// Part 4: Create Customer Orders
+// ============================================
+
+MERGE (o1:CustomerOrder {order_id: 'ORD_001'})
+ON CREATE SET
+    o1.due_date = datetime() + duration('P7D'),
+    o1.total_value = 450.00,
+    o1.priority = 'Critical',
+    o1.status = 'Pending',
+    o1.predicted_delay_days = 0,
+    o1.created_at = datetime(),
+    o1.updated_at = datetime();
+
+MERGE (o2:CustomerOrder {order_id: 'ORD_002'})
+ON CREATE SET
+    o2.due_date = datetime() + duration('P14D'),
+    o2.total_value = 600.00,
+    o2.priority = 'High',
+    o2.status = 'Pending',
+    o2.predicted_delay_days = 0,
+    o2.created_at = datetime(),
+    o2.updated_at = datetime();
+
+MERGE (o3:CustomerOrder {order_id: 'ORD_003'})
+ON CREATE SET
+    o3.due_date = datetime() + duration('P10D'),
+    o3.total_value = 300.00,
+    o3.priority = 'Standard',
+    o3.status = 'Pending',
+    o3.predicted_delay_days = 0,
+    o3.created_at = datetime(),
+    o3.updated_at = datetime();
+
+MERGE (o4:CustomerOrder {order_id: 'ORD_004'})
+ON CREATE SET
+    o4.due_date = datetime() + duration('P5D'),
+    o4.total_value = 200.00,
+    o4.priority = 'Critical',
+    o4.status = 'Pending',
+    o4.predicted_delay_days = 0,
+    o4.created_at = datetime(),
+    o4.updated_at = datetime();
+
+// ============================================
+// Part 5: Create Business Relationships
+// ============================================
+
+// Orders contain products
+MATCH (o:CustomerOrder), (p:Product)
+WHERE o.order_id = 'ORD_001' AND p.sku_id = 'SKU_ELECTRONICS_001'
+MERGE (o)-[r1:CONTAINS]->(p)
+ON CREATE SET r1.quantity = 3;
+
+MATCH (o:CustomerOrder), (p:Product)
+WHERE o.order_id = 'ORD_002' AND p.sku_id = 'SKU_FURNITURE_001'
+MERGE (o)-[r2:CONTAINS]->(p)
+ON CREATE SET r2.quantity = 3;
+
+MATCH (o:CustomerOrder), (p:Product)
+WHERE o.order_id = 'ORD_003' AND p.sku_id = 'SKU_CLOTHING_001'
+MERGE (o)-[r3:CONTAINS]->(p)
+ON CREATE SET r3.quantity = 6;
+
+MATCH (o:CustomerOrder), (p:Product)
+WHERE o.order_id = 'ORD_004' AND p.sku_id = 'SKU_ELECTRONICS_001'
+MERGE (o)-[r4:CONTAINS]->(p)
+ON CREATE SET r4.quantity = 1;
+
+// Orders sourced from distribution centers
+MATCH (o:CustomerOrder), (dc:DistributionCenter)
+WHERE o.order_id = 'ORD_001' AND dc.dc_id = 'DC_LON_02'
+MERGE (o)-[:SOURCED_FROM]->(dc);
+
+MATCH (o:CustomerOrder), (dc:DistributionCenter)
+WHERE o.order_id = 'ORD_002' AND dc.dc_id = 'DC_LON_02'
+MERGE (o)-[:SOURCED_FROM]->(dc);
+
+MATCH (o:CustomerOrder), (dc:DistributionCenter)
+WHERE o.order_id = 'ORD_003' AND dc.dc_id = 'DC_MUC_01'
+MERGE (o)-[:SOURCED_FROM]->(dc);
+
+MATCH (o:CustomerOrder), (dc:DistributionCenter)
+WHERE o.order_id = 'ORD_004' AND dc.dc_id = 'DC_LON_02'
+MERGE (o)-[:SOURCED_FROM]->(dc);
+
+// DCs stock products
+MATCH (dc:DistributionCenter), (p:Product)
+WHERE dc.dc_id = 'DC_LON_01' AND p.sku_id = 'SKU_ELECTRONICS_001'
+MERGE (dc)-[s1:STOCKS]->(p)
+ON CREATE SET s1.quantity = 500;
+
+MATCH (dc:DistributionCenter), (p:Product)
+WHERE dc.dc_id = 'DC_LON_02' AND p.sku_id = 'SKU_ELECTRONICS_001'
+MERGE (dc)-[s2:STOCKS]->(p)
+ON CREATE SET s2.quantity = 800;
+
+MATCH (dc:DistributionCenter), (p:Product)
+WHERE dc.dc_id = 'DC_LON_02' AND p.sku_id = 'SKU_FURNITURE_001'
+MERGE (dc)-[s3:STOCKS]->(p)
+ON CREATE SET s3.quantity = 300;
+
+MATCH (dc:DistributionCenter), (p:Product)
+WHERE dc.dc_id = 'DC_MUC_01' AND p.sku_id = 'SKU_CLOTHING_001'
+MERGE (dc)-[s4:STOCKS]->(p)
+ON CREATE SET s4.quantity = 1000;
+
+MATCH (dc:DistributionCenter), (p:Product)
+WHERE dc.dc_id = 'DC_MUC_02' AND p.sku_id = 'SKU_CLOTHING_001'
+MERGE (dc)-[s5:STOCKS]->(p)
+ON CREATE SET s5.quantity = 600;
+
+// ============================================
+// Additional orders for DC_MUC_01 to create resource conflict (Scenario 2)
+// ============================================
+
+MERGE (o5:CustomerOrder {order_id: 'ORD_005'})
+ON CREATE SET
+    o5.due_date = datetime() + duration('P3D'),
+    o5.total_value = 800.00,
+    o5.priority = 'Critical',
+    o5.status = 'Pending',
+    o5.predicted_delay_days = 0,
+    o5.created_at = datetime(),
+    o5.updated_at = datetime();
+
+MERGE (o6:CustomerOrder {order_id: 'ORD_006'})
+ON CREATE SET
+    o6.due_date = datetime() + duration('P5D'),
+    o6.total_value = 150.00,
+    o6.priority = 'Standard',
+    o6.status = 'Pending',
+    o6.predicted_delay_days = 0,
+    o6.created_at = datetime(),
+    o6.updated_at = datetime();
+
+// Link additional orders to products
+MATCH (o5:CustomerOrder), (p1:Product)
+WHERE o5.order_id = 'ORD_005' AND p1.sku_id = 'SKU_ELECTRONICS_001'
+MERGE (o5)-[r5:CONTAINS]->(p1)
+ON CREATE SET r5.quantity = 5;
+
+MATCH (o6:CustomerOrder), (p3:Product)
+WHERE o6.order_id = 'ORD_006' AND p3.sku_id = 'SKU_CLOTHING_001'
+MERGE (o6)-[r6:CONTAINS]->(p3)
+ON CREATE SET r6.quantity = 3;
+
+// Link additional orders to DC_MUC_01
+MATCH (o5:CustomerOrder), (dc3:DistributionCenter)
+WHERE o5.order_id = 'ORD_005' AND dc3.dc_id = 'DC_MUC_01'
+MERGE (o5)-[:SOURCED_FROM]->(dc3);
+
+MATCH (o6:CustomerOrder), (dc3:DistributionCenter)
+WHERE o6.order_id = 'ORD_006' AND dc3.dc_id = 'DC_MUC_01'
+MERGE (o6)-[:SOURCED_FROM]->(dc3);
+
+// Ensure DC_MUC_01 has Electronics stock for additional orders
+MATCH (dc3:DistributionCenter), (p1:Product)
+WHERE dc3.dc_id = 'DC_MUC_01' AND p1.sku_id = 'SKU_ELECTRONICS_001'
+MERGE (dc3)-[s_electronics:STOCKS]->(p1)
+ON CREATE SET s_electronics.quantity = 300;
+
+// ============================================
+// Part 6: Create Capabilities (Meta Layer)
+// ============================================
+
+// Distribution Center Capabilities
+MERGE (cap1:Capability {cap_id: 'CAP_DC_CHECK_CAPACITY'})
+ON CREATE SET
+    cap1.name = 'CheckCapacity',
+    cap1.type = 'LogicFunction',
+    cap1.description = 'Check if DC has sufficient capacity for orders',
+    cap1.input_schema = '{
+      "dc_id": {"type": "string", "description": "Single distribution center ID", "example": "DC_LON_01"},
+      "dc_ids": {"type": "list of string", "description": "Multiple distribution center IDs", "example": ["DC_LON_01", "DC_LON_02"]},
+      "required_capacity": {"type": "integer", "description": "Required capacity (for single DC)", "example": 1000},
+      "order_quantities": {"type": "list of integer", "description": "Order quantities (for multiple DCs)", "example": [500, 300]}
+    }',
+    cap1.output_schema = '{"has_capacity": "boolean", "available_capacity": "integer"}',
+    cap1.implementation = 'src.capabilities.dc_capabilities.CheckCapacityCapability',
+    cap1.active = true,
+    cap1.created_at = datetime();
+
+MERGE (cap2:Capability {cap_id: 'CAP_DC_UPDATE_STATUS'})
+ON CREATE SET
+    cap2.name = 'UpdateStatus',
+    cap2.type = 'Action',
+    cap2.description = 'Update DC status',
+    cap2.input_schema = '{
+      "dc_id": {"type": "string", "description": "Distribution center ID to update", "example": "DC_LON_01"},
+      "new_status": {"type": "string", "description": "New status. Must be one of: Active, Down, Critical", "example": "Active"}
+    }',
+    cap2.output_schema = '{"success": "boolean", "previous_status": "string"}',
+    cap2.implementation = 'src.capabilities.dc_capabilities.UpdateStatusCapability',
+    cap2.active = true,
+    cap2.created_at = datetime();
+
+MERGE (cap3:Capability {cap_id: 'CAP_DC_CALCULATE_RISK'})
+ON CREATE SET
+    cap3.name = 'CalculateRisk',
+    cap3.type = 'PredictModel',
+    cap3.description = 'Calculate DC risk score',
+    cap3.input_schema = '{
+      "dc_id": {"type": "string", "description": "Distribution center ID to calculate risk for", "example": "DC_MUC_01"}
+    }',
+    cap3.output_schema = '{"risk_score": "float", "risk_factors": ["string"]}',
+    cap3.implementation = 'src.capabilities.dc_capabilities.CalculateRiskCapability',
+    cap3.active = true,
+    cap3.created_at = datetime();
+
+// Order Capabilities
+MERGE (cap4:Capability {cap_id: 'CAP_ORDER_REALLOCATE'})
+ON CREATE SET
+    cap4.name = 'ReallocateOrders',
+    cap4.type = 'Action',
+    cap4.description = 'Reallocate orders to different DC',
+    cap4.input_schema = '{
+      "order_ids": {"type": "list of string", "description": "List of order order IDs to reallocate", "example": ["ORD_001", "ORD_002"]},
+      "target_dc_id": {"type": "string", "description": "Target distribution center ID to reallocate to", "example": "DC_LON_01"}
+    }',
+    cap4.output_schema = '{"reallocated_count": "integer", "failed_orders": ["string"]}',
+    cap4.implementation = 'src.capabilities.order_capabilities.ReallocateOrdersCapability',
+    cap4.active = true,
+    cap4.created_at = datetime();
+
+MERGE (cap5:Capability {cap_id: 'CAP_ORDER_ESCALATE_PRIORITY'})
+ON CREATE SET
+    cap5.name = 'EscalatePriority',
+    cap5.type = 'Action',
+    cap5.description = 'Escalate order priority',
+    cap5.input_schema = '{
+      "order_ids": {"type": "list of string", "description": "List of order IDs to escalate", "example": ["ORD_001", "ORD_003"]},
+      "new_priority": {"type": "string", "description": "New priority level. Must be one of: Critical, High, Standard", "example": "Critical"}
+    }',
+    cap5.output_schema = '{"escalated_count": "integer"}',
+    cap5.implementation = 'src.capabilities.order_capabilities.EscalatePriorityCapability',
+    cap5.active = true,
+    cap5.created_at = datetime();
+
+MERGE (cap6:Capability {cap_id: 'CAP_ORDER_PREDICT_DELAY'})
+ON CREATE SET
+    cap6.name = 'PredictDelay',
+    cap6.type = 'PredictModel',
+    cap6.description = 'Predict order delay',
+    cap6.input_schema = '{
+      "order_id": {"type": "string", "description": "Order ID to predict delay for", "example": "ORD_001"}
+    }',
+    cap6.output_schema = '{"predicted_delay_days": "integer", "confidence": "float"}',
+    cap6.implementation = 'src.capabilities.order_capabilities.PredictDelayCapability',
+    cap6.active = true,
+    cap6.created_at = datetime();
+
+MERGE (cap7:Capability {cap_id: 'CAP_ORDER_SPLIT'})
+ON CREATE SET
+    cap7.name = 'SplitOrder',
+    cap7.type = 'Action',
+    cap7.description = 'Split order into multiple sub-orders',
+    cap7.input_schema = '{
+      "order_id": {"type": "string", "description": "Order ID to split", "example": "ORD_001"},
+      "split_quantities": {"type": "list of integer", "description": "List of product quantities for each split (percentage)", "example": [50, 50]},
+      "target_dc_ids": {"type": "list of string", "description": "List of target DC IDs for each split", "example": ["DC_LON_01", "DC_LON_02"]}
+    }',
+    cap7.output_schema = '{"split_order_ids": ["string"], "original_order_id": "string"}',
+    cap7.implementation = 'src.capabilities.order_capabilities.SplitOrderCapability',
+    cap7.active = true,
+    cap7.created_at = datetime();
+
+// Product Capabilities
+MERGE (cap8:Capability {cap_id: 'CAP_PRODUCT_CHECK_STOCK'})
+ON CREATE SET
+    cap8.name = 'CheckStock',
+    cap8.type = 'LogicFunction',
+    cap8.description = 'Check product stock availability',
+    cap8.input_schema = '{
+      "sku_id": {"type": "string", "description": "Product SKU ID to check stock for", "example": "SKU_ELECTRONICS_001"},
+      "dc_id": {"type": "string", "description": "Distribution center ID", "example": "DC_LON_01"}
+    }',
+    cap8.output_schema = '{"available": "boolean", "quantity": "integer"}',
+    cap8.implementation = 'src.capabilities.product_capabilities.CheckStockCapability',
+    cap8.active = true,
+    cap8.created_at = datetime();
+
+// CalculatePenalty Capability (Order Capability for penalty calculation)
+MERGE (cap9:Capability {cap_id: 'CAP_ORDER_CALCULATE_PENALTY'})
+ON CREATE SET
+    cap9.name = 'CalculatePenalty',
+    cap9.type = 'Action',
+    cap9.description = 'Calculate SLA breach penalty for an order',
+    cap9.input_schema = '{
+      "order_id": {"type": "string", "description": "Single order ID to calculate penalty for", "example": "ORD_001"},
+      "order_ids": {"type": "list of string", "description": "List of order IDs (batch mode)", "example": ["ORD_001", "ORD_002"]},
+      "actual_delivery_date": {"type": "datetime", "description": "Actual delivery date (if known)", "example": "2026-03-10T00:00:00Z", "required": false}
+    }',
+    cap9.output_schema = '{"penalty_amount": "float", "penalty_components": {"delay_days": "int", "daily_penalty_rate": "float", "priority_multiplier": "float", "total_penalty": "float"}}',
+    cap9.implementation = 'src.capabilities.order_capabilities.CalculatePenaltyCapability',
+    cap9.active = true,
+    cap9.created_at = datetime();
+
+// Link CalculatePenalty capability to CustomerOrder
+MATCH (o:CustomerOrder), (cap:Capability)
+WHERE cap.cap_id = 'CAP_ORDER_CALCULATE_PENALTY'
+MERGE (o)-[:HAS_CAPABILITY]->(cap);
+
+// ============================================
+// Part 7: Link Capabilities to Ontology Entities
+// ============================================
+
+// Link DistributionCenter Capabilities to all Distribution Centers
+MATCH (dc:DistributionCenter), (cap:Capability)
+WHERE cap.cap_id IN ['CAP_DC_CHECK_CAPACITY', 'CAP_DC_UPDATE_STATUS', 'CAP_DC_CALCULATE_RISK']
+MERGE (dc)-[:HAS_CAPABILITY]->(cap);
+
+// Link CustomerOrder Capabilities to all Customer Orders
+MATCH (o:CustomerOrder), (cap:Capability)
+WHERE cap.cap_id IN ['CAP_ORDER_REALLOCATE', 'CAP_ORDER_ESCALATE_PRIORITY', 'CAP_ORDER_PREDICT_DELAY', 'CAP_ORDER_SPLIT']
+MERGE (o)-[:HAS_CAPABILITY]->(cap);
+
+// Link Product Capabilities to all Products
+MATCH (p:Product), (cap:Capability)
+WHERE cap.cap_id = 'CAP_PRODUCT_CHECK_STOCK'
+MERGE (p)-[:HAS_CAPABILITY]->(cap);
+
+// ============================================
+// Part 8: Verification Queries
+// ============================================
+
+// Count nodes
+MATCH (n) RETURN 'Total nodes' as type, count(n) as count
+UNION ALL
+MATCH (n:DistributionCenter) RETURN 'Distribution Centers' as type, count(n) as count
+UNION ALL
+MATCH (n:CustomerOrder) RETURN 'Customer Orders' as type, count(n) as count
+UNION ALL
+MATCH (n:Product) RETURN 'Products' as type, count(n) as count
+UNION ALL
+MATCH (n:Capability) RETURN 'Capabilities' as type, count(n) as count;
