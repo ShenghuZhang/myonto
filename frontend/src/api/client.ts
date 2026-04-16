@@ -8,7 +8,7 @@ import { ApiResponse, ApiError } from '../types/api';
 
 class ApiClient {
   private client: AxiosInstance;
-  private baseURL: string;
+  public baseURL: string;
 
   constructor(baseURL: string = 'http://localhost:8000') {
     this.baseURL = baseURL;

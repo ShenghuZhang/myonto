@@ -74,6 +74,17 @@ export const OntologyGraph: React.FC<OntologyGraphProps> = ({
     <div className="flex h-full">
       {/* Main Graph Area */}
       <div ref={containerRef} className="flex-1 relative graph-container">
+        {/* Graph Controls */}
+        <GraphControls
+          filters={filters}
+          onFilterChange={onFilterChange}
+          showEdgeLabels={showEdgeLabels}
+          onToggleEdgeLabels={() => setShowEdgeLabels(!showEdgeLabels)}
+          onZoomIn={handleZoomIn}
+          onZoomOut={handleZoomOut}
+          onResetZoom={resetZoom}
+        />
+
         {/* SVG Container */}
         <div
           className="w-full h-full cursor-move"
@@ -99,15 +110,15 @@ export const OntologyGraph: React.FC<OntologyGraphProps> = ({
             <div className="text-gray-500">{hoveredNode.type}</div>
           </div>
         )}
-      </div>
 
-      {/* Detail Panel */}
-      {selectedNode && (
-        <NodeDetailPanel
-          node={selectedNode}
-          onClose={() => setSelectedNode(null)}
-        />
-      )}
+        {/* Detail Panel */}
+        {selectedNode && (
+          <NodeDetailPanel
+            node={selectedNode}
+            onClose={() => setSelectedNode(null)}
+          />
+        )}
+      </div>
     </div>
   );
 };

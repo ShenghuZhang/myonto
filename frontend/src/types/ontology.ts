@@ -207,3 +207,33 @@ export const createCapability = (overrides?: Partial<Capability>): Capability =>
   updated_at: '2026-04-07T00:00:00Z',
   ...overrides,
 });
+
+// View Mode Types
+export type ViewMode = 'graph' | 'split' | 'agent';
+
+// Chat Message Types
+export type MessageRole = 'user' | 'assistant' | 'system';
+
+export interface ChatMessage {
+  id: string;
+  role: MessageRole;
+  content: string;
+  timestamp: string;
+}
+
+// Chat Request Types
+export interface ChatRequest {
+  query: string;
+  conversation_history?: ChatMessage[];
+  context?: {
+    graph_data?: GraphData;
+    selected_nodes?: string[];
+  };
+}
+
+// SSE Stream Response Types
+export interface StreamingResponse {
+  event: 'message' | 'error' | 'done';
+  data: string;
+  error?: string;
+}

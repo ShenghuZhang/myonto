@@ -6,11 +6,14 @@
 import React from 'react';
 import { MainLayout } from './components/layout/MainLayout';
 import { OntologyGraph } from './components/graph/OntologyGraph';
+import { ErrorBoundary } from './components/ErrorBoundary';
 import { useGraphData } from './hooks/useGraphData';
 import { useGraphStore } from './stores/graphStore';
 import { Loader2, AlertCircle } from 'lucide-react';
+import { ViewMode, GraphData } from './types/ontology';
 
 function App() {
+  const [viewMode, setViewMode] = React.useState<ViewMode>('graph');
   const { nodes: dataNodes, links: dataLinks, loading, error } = useGraphData();
   const {
     nodes: storeNodes,
@@ -24,6 +27,11 @@ function App() {
   // Use data from store if available, otherwise use data from hook
   const nodes = storeNodes.length > 0 ? storeNodes : dataNodes;
   const links = storeLinks.length > 0 ? storeLinks : dataLinks;
+
+  const graphData: GraphData = {
+    nodes,
+    links,
+  };
 
   // Update store when data changes
   React.useEffect(() => {
@@ -59,16 +67,23 @@ function App() {
   }
 
   return (
-    <MainLayout>
-      <OntologyGraph
-        nodes={nodes}
-        links={links}
-        filters={filters}
-        onFilterChange={setFilters}
-        layout="force-directed"
-        onLayoutChange={() => {}}
-      />
-    </MainLayout>
+    <ErrorBoundary>
+      <MainLayout
+        viewMode={viewMode}
+        onViewModeChange={setViewMode}
+        graphData={graphData}
+        selectedNode={null}
+      >
+        <OntologyGraph
+          nodes={nodes}
+          links={links}
+          filters={filters}
+          onFilterChange={setFilters}
+          layout="force-directed"
+          onLayoutChange={() => {}}
+        />
+      </MainLayout>
+    </ErrorBoundary>
   );
 }
 
